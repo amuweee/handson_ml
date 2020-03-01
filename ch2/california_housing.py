@@ -10,12 +10,13 @@ from pandas.plotting import scatter_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import GridSearchCV
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OrdinalEncoder
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import StandardScaler
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
 from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
@@ -323,7 +324,6 @@ display_scores(tree_rmse_scores)
 
 # %%
 # Ensembling method
-from sklearn.ensemble import RandomForestRegressor
 forest_reg = RandomForestRegressor()
 forest_reg.fit(housing_prepared, housing_labels)
 scores = cross_val_score(
@@ -338,3 +338,67 @@ forest_rmse_scores = np.sqrt(-scores)
 display_scores(forest_rmse_scores)
 
 # %%
+# Grid seach the hyper parameters
+
+param_grid = [
+    {
+        'n_estimators': [3,10,30],
+        'max_features': [2,4,6,8]
+    },
+    {
+        'bootstrap': [False],
+        'n_estimators': [3,10],
+        'max_features': [2,3,4]
+    }
+]
+
+forest_reg = RandomForestRegressor()
+
+grid_search = GridSearchCV(
+    forest_reg,
+    param_grid,
+    cv=5,
+    scoring='neg_mean_squared_error',
+    return_train_score=True,
+)
+
+grid_search.fit(housing_prepared, housing_labels)
+
+grid_search.best_params_
+
+# %%
+grid_search.best_estimator_
+
+# %%
+# Compute feature importance
+feature_importances = grid_search.best_estimator_.feature_importances_
+feature_importances
+
+# %%
+extra_attribs = [
+    "room_per_hhold",
+    "pop_per_hhold",
+    "bedroom_per_room",
+]
+cat_encoder = full_pipeline.named_transformers_["cat"]
+cat_one_hot_attribs = list(cat_encoder.categories_[0])
+attributes = num_attribs + extra_attribs + cat_one_hot_attribs
+sorted(zip(feature_importances, attributes), reverse=True)
+
+# %%
+# Finally, test the model on the test set
+final_model = grid_search.best_estimator_
+
+X_test = strat_test_set.drop("median_house_value", axis=1)
+y_test = strat_test_set["median_house_value"].copy()
+
+X_test_prepared = full_pipeline.transform(X_test)
+
+final_prediction = final_model.predict(X_test_prepared)
+
+final_mse = mean_squared_error(y_test, final_prediction)
+final_rmse = np.sqrt(final_mse)
+
+# %%
+final_rmse
+
