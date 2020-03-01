@@ -1,16 +1,26 @@
 #%%
+
 import os
 import tarfile
 import urllib
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+from pandas.plotting import scatter_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.model_selection import cross_val_score
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OrdinalEncoder
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.compose import ColumnTransformer
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor
 
 
 # Download data
@@ -162,8 +172,8 @@ corr_matrix["median_house_value"].sort_values(ascending=False)
 
 # %%
 # Preparing the data model
-housing = strat_train_set.drop("median_house_values", axis=1)
-housing_labels = strat_train_set["median_house_values"].copy()
+housing = strat_train_set.drop("median_house_value", axis=1)
+housing_labels = strat_train_set["median_house_value"].copy()
 
 
 # %%
@@ -233,4 +243,98 @@ class CombinedAttributesAdder(BaseEstimator, TransformerMixin):
 
 
 # %%
+# wrap a class for pipeline workflow
+num_pipeline = Pipeline(
+    [
+        ("imputer", SimpleImputer(strategy="median")),
+        ("attribs_adder", CombinedAttributesAdder()),
+        ("std_scaler", StandardScaler()),
+    ]
+)
 
+housing_num_tr = num_pipeline.fit_transform(housing_num)
+
+
+# %%
+
+# wrap a class under one transformer that will do for all columns
+num_attribs = list(housing_num)
+cat_attribs = ["ocean_proximity"]
+
+full_pipeline = ColumnTransformer(
+    [("num", num_pipeline, num_attribs), ("cat", OneHotEncoder(), cat_attribs)],
+)
+
+housing_prepared = full_pipeline.fit_transform(housing)
+
+
+# %%
+housing_prepared
+
+# %%
+# Selecting and Training the model
+lin_reg = LinearRegression()
+lin_reg.fit(housing_prepared, housing_labels)
+
+# %%
+some_data = housing.iloc[:5]
+some_labels = housing_labels.iloc[:5]
+some_data_prepared = full_pipeline.transform(some_data)
+print("Predictions:", lin_reg.predict(some_data_prepared))
+print("Labels:", list(some_labels))
+
+# %%
+housing_predictions = lin_reg.predict(housing_prepared)
+lin_mse = mean_squared_error(housing_labels, housing_predictions)
+lin_rmse = np.sqrt(lin_mse)
+lin_rmse
+
+
+# %%
+# Decision Tree Regressor model
+tree_reg = DecisionTreeRegressor()
+tree_reg.fit(housing_prepared, housing_labels)
+
+# %%
+housing_predictions = tree_reg.predict(housing_prepared)
+tree_mse = mean_squared_error(housing_labels, housing_predictions)
+tree_rmse = np.sqrt(tree_mse)
+tree_rmse  # overfit af
+
+# %%
+# Cross-Validation
+# K-fold cross-validation: splits the training data into 10 folds and validates each
+scores = cross_val_score(
+    tree_reg,
+    housing_prepared,
+    housing_labels,
+    scoring="neg_mean_squared_error",
+    cv=10
+)
+tree_rmse_scores = np.sqrt(-scores)
+
+# %%
+def display_scores(scores):
+    print("Scores", scores)
+    print("Mean:", scores.mean())
+    print("Standard Deviation:", scores.std())
+
+display_scores(tree_rmse_scores)
+
+# %%
+# Ensembling method
+from sklearn.ensemble import RandomForestRegressor
+forest_reg = RandomForestRegressor()
+forest_reg.fit(housing_prepared, housing_labels)
+scores = cross_val_score(
+    forest_reg,
+    housing_prepared,
+    housing_labels,
+    scoring="neg_mean_squared_error",
+    cv=10
+)
+
+forest_rmse_scores = np.sqrt(-scores)
+display_scores(forest_rmse_scores)
+
+# %%
