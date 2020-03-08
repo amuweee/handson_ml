@@ -131,3 +131,121 @@ def plot_precision_recall_vs_threshold(precisions, recalls, thresholds):
 
 plot_precision_recall_vs_threshold(precisions, recalls, thresholds)
 plt.show()
+
+
+# ROC - Receuver Operating Characteristics curve
+# ROC curve plots true positive against true negative
+from sklearn.metrics import roc_curve
+
+fpr, tpr, thresholds = roc_curve(y_train_5, y_scores)
+
+
+def plot_roc_curve(fpr, tpr, label=None):
+    plt.plot(fpr, tpr, linewidth=2, label=label)
+    plt.plot([0, 1], [0, 1], "k--")
+
+
+plot_roc_curve(fpr, tpr)
+plt.show()
+# The area under the curve is the model performance. More away to the dotted line = Better
+
+from sklearn.metrics import roc_auc_score
+
+roc_auc_score(y_train_5, y_scores)
+
+
+# Let's compare the SGDClasifier to RandomForest
+
+from sklearn.ensemble import RandomForestClassifier
+
+forest_clf = RandomForestClassifier(random_state=42)
+y_probas_forest = cross_val_predict(
+    forest_clf, X_train, y_train_5, cv=3, method="predict_proba"
+)
+
+y_scores_forest = y_probas_forest[:, 1]  # scores = proba of positive class
+fpr_forest, tpr_forest, thresholds_forest = roc_curve(y_train_5, y_scores_forest)
+
+# Let's plot
+plt.plot(fpr, tpr, label="SGD")
+plot_roc_curve(fpr_forest, tpr_forest, "Random Forest")
+plt.legend(loc="lower right")
+plt.show()
+
+# RandomForestClassifier is better
+
+
+###______ MULTICLASS CLASSIFICCATION
+# One versus the rest
+# One versus one
+# some algorithms in sklearn will select OvR or OvO automatically
+
+from sklearn.svm import SVC
+
+svm_clf = SVC()
+svm_clf.fit(X_train, y_train)
+svm_clf.predict([some_digit])
+
+# see prediction per class
+some_digit_scores = svm_clf.decision_function([some_digit])
+some_digit_scores
+
+# To specify OvR or OvO classifier:
+from sklearn.multiclass import OneVsRestClassifier
+
+ovr_clf = OneVsRestClassifier(SVC())
+ovr_clf.fit(X_train, y_train)
+ovr_clf.predict([some_digit])
+len(ovr_clf.estimators_)
+
+
+# Get some scoring on cross_val
+cross_val_predict(sgd_clf, X_train, y_train, cv=3, scoring="accuracy")
+
+# scale the data to improve accuracy
+from sklearn.preprocessing import StandardScaler
+
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train.astype(np.float64))
+cross_val_score(sgd_clf, X_train_scaled, y_train, cv=3, scoring="accuracy")
+
+# Error analysis
+# Time to compare to other models and look at way to improve predictions
+# Get confusion matrix
+y_train_pred = cross_val_predict(
+    sgd_clf, X_train_scaled, y_train, cv=3, scoring="accuracy"
+)
+
+conf_mx = confusion_matrix(y_train, y_train_pred)
+conf_mx
+
+# too many values, plot htem in a graph
+plt.matshow(conf_mx, cmap=plt.cm.gray)
+plt.show()
+
+# turn the confusion matrix to show by % of errors instead of absolute numbers
+row_sums = conf_mx.sum(axis=1, keepdims=True)
+norm_conf_mx = conf_mx / row_sums
+np.fill_diagonal(norm_conf_mx, 0)
+plt.matshow(norm_conf_mx, cmap=plt.cm.gray)
+plt.show()  # rows=actual classes, col=predicted classes
+
+
+# Multilabel classification: multiple predictions (list) per label
+from sklearn.neighbors import KNeighborsClassifier
+
+y_train_large = y_train >= 7  # labels that are 7,8 or 9
+y_train_odd = y_train % 2 == 1
+y_multilabel = np.c_[
+    y_train_large, y_train_odd
+]  # concat into a list of results on whether the digit is [Large, Odd]
+
+knn_clf = KNeighborsClassifier()
+knn_clf.fit(X_train, y_multilabel)
+
+knn_clf.predict([some_digit])
+
+# compute F1 score across all labels
+y_train_knn_pred = cross_val_predict(knn_clf, X_train, y_multilabel, cv=3)
+f1_score(y_multilabel, y_train_knn_pred, average="macro")
+
