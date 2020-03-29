@@ -56,3 +56,117 @@ for interation in range(n_iteration):
     theta = theta - eta * gradients
 
 theta
+
+
+## STOCHASTIC GRADIENT DESCENT
+# Batch trains on the whole data set -> slow
+# stochastic does on a subset, so is faster but also ireggular
+# learning schedule is there to reduce learning rate over time
+
+n_epochs = 50
+t0, t1 = 5, 50  # learning rate hyperparameters
+
+
+def learning_schedule(t):
+    return t0 / (t + t1)
+
+
+theta = np.random.randn(2, 1)
+
+for epoch in range(n_epochs):
+    for i in range(m):
+        random_index = np.random.randint(m)
+        xi = X_b[random_index : random_index + 1]
+        yi = y[random_index : random_index + 1]
+        gradients = 2 * xi.T.dot(xi.dot(theta) - yi)
+        eta = learning_schedule(epoch * m + i)
+        theta = theta - eta * gradients
+
+theta
+
+
+# Stochastic Gradient Descent
+from sklearn.linear_model import SGDRegressor
+
+sgd_reg = SGDRegressor(max_iter=1000, tol=1e-3, penalty=None, eta0=0.1)
+sgd_reg.fit(X, y.ravel())
+
+sgd_reg.intercept_, sgd_reg.coef_
+
+
+# Mini batch Gradient Descent
+# instead of full set or per instance, this computes by mini-batches
+
+
+## POLYNOMINAL REGRESSION
+# adding powers to each features of a linear regression -> curves
+
+# create a sample dataset
+m = 120
+X = 6 * np.random.rand(m, 1) - 3
+y = 0.5 * X ** 2 + X + 2 + np.random.rand(m, 1)
+
+from sklearn.preprocessing import PolynomialFeatures
+
+poly_features = PolynomialFeatures(degree=2, include_bias=False)
+X_poly = poly_features.fit_transform(X)
+X[0]
+X_poly[0]
+
+lin_reg = LinearRegression()
+lin_reg.fit(X_poly, y)
+lin_reg.intercept_, lin_reg.coef_
+
+
+# Learning Curves
+from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import train_test_split
+
+
+def plot_learning_curves(model, X, y):
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2)
+    train_errors, val_errors = [], []
+    for m in range(1, len(X_train)):
+        model.fit(X_train[:m], y_train[:m])
+        y_train_predict = model.predict(X_train[:m])
+        y_val_predict = model.predict(X_val)
+        train_errors.append(mean_squared_error(y_train[:m], y_train_predict))
+        val_errors.append(mean_squared_error(y_val, y_val_predict))
+    plt.plot(np.sqrt(train_errors), "r-+", linewidth=2, label="train")
+    plt.plot(np.sqrt(val_errors), "b-", linewidth=3, label="val")
+
+
+lin_reg = LinearRegression()
+plot_learning_curves(lin_reg, X, y)
+
+
+from sklearn.pipeline import Pipeline
+
+polynomial_regression = Pipeline(
+    [
+        ("poly_features", PolynomialFeatures(degree=10, include_bias=False)),
+        ("lin_reg", LinearRegression()),
+    ]
+)
+plot_learning_curves(polynomial_regression, X, y)
+
+
+## Regularized Liner Models
+
+# Ridge Regression
+from sklearn.linear_model import Ridge
+
+
+# Closed form
+ridge_reg = Ridge(alpha=1, solver="cholesky")
+ridge_reg.fit(X, y)
+ridge_reg.predict([[1.5]])
+
+# Stochastic Gradient Descent
+sgd_reg = SGDRegressor(penalty="l2")
+sgd_reg.fit(X, y.ravel())
+sgd_reg.predict([[1.5]])
+
+# Lasso Regression
+# LASSO = Last Absolute Shrinkage and Selection Operator Regression
+from sklearn.linear_model import Lasso
