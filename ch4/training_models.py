@@ -170,3 +170,38 @@ sgd_reg.predict([[1.5]])
 # Lasso Regression
 # LASSO = Last Absolute Shrinkage and Selection Operator Regression
 from sklearn.linear_model import Lasso
+
+lasso_reg = Lasso(alpha=0.1)
+lasso_reg.fit(X, y)
+lasso_reg.predict([[1.5]])
+
+
+# Elastic Net
+# it's a mix of Lasso and Ridge
+
+from sklearn.linear_model import ElasticNet
+
+elastic_net = ElasticNet(alpha=0.1, l1_ratio=0.5)
+elastic_net.fit(X, y)
+elastic_net.predict([[1.5]])
+
+
+# Logistic Regression
+from sklearn import datasets
+
+iris = datasets.load_iris()
+list(iris.keys())
+
+X = iris["data"][:, 3:]  # petal width
+y = (iris["target"] == 2).astype(np.int)  # 1 if Iris Virginica, else 0
+
+from sklearn.linear_model import LogisticRegression
+
+log_reg = LogisticRegression()
+log_reg.fit(X, y)
+
+X_new = np.linspace(0, 3, 1000).reshape(-1, 1)
+y_proba = log_reg.predict_proba(X_new)
+plt.plot(X_new, y_proba[:, 1], "g-", label="Iris virginica")
+plt.plot(X_new, y_proba[:, 0], "b-", label="Not Iris virginica")
+
