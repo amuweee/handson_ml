@@ -77,3 +77,28 @@ tree_clf.predict_proba([[5, 1.5]])
 tree_clf.predict([[5, 1.5]])
 
 # %%
+"""
+Gini impurity or Entropy?
+    can swtich to entropy measure by setting the criterion hypterparameter
+    to 'entropy'
+
+Regularization
+    by default decision tree will adapt to 100% of training data (nonparametric)
+    There are a few ways to regularize it
+        min_sample_split
+        min_sample_leaf
+        min_weight_fraction_leaf
+        max_leaf_nodes
+        max_features
+"""
+
+# Regression
+from sklearn.tree import DecisionTreeRegressor
+
+tree_reg = DecisionTreeRegressor(max_depth=2)
+tree_reg.fit(X, y)
+
+# the tree will predict a value, where the smallest leaf is the average 
+# of that category
+
+# %%
