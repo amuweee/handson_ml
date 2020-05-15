@@ -84,3 +84,81 @@ from sklearn.metrics import accuracy_score
 
 y_pred = bag_clf.predict(X_test)
 accuracy_score(y_test, y_pred)
+
+
+"""
+Random Forests is a a bagging method that's optimized fir decision trees
+    it uses all cores to do the training
+
+"""
+
+from sklearn.ensemble import RandomForestClassifier
+
+rnd_clf = RandomForestClassifier(n_estimators=500, max_leaf_nodes=16, n_jobs=-1)
+rnd_clf.fit(X_train, y_train)
+
+y_pred_rf = rnd_clf.predict(X_test)
+
+
+# Another use for random forests is to determine the relative importance of each feature
+#   it is a weighted average of each node
+
+from sklearn.datasets import load_iris
+
+iris = load_iris()
+rnd_clf = RandomForestClassifier(n_estimators=500, n_jobs=-1)
+rnd_clf.fit(iris["data"], iris["target"])
+for name, score in zip(iris["feature_names"], rnd_clf.feature_importances_):
+    print(name, score)
+
+
+"""
+Boosting (originally called hypothesis boosting) refers to any Ensemble method that
+can combine several weak learners into a strong learner. The general idea of most
+boosting methods is to train predictors sequentially, each trying to correct its prede‐
+cessor. 
+"""
+
+# AdaBoost
+"""
+For example, when training an AdaBoost classifier, the algorithm first trains a base
+classifier (such as a Decision Tree) and uses it to make predictions on the training set.
+The algorithm then increases the relative weight of misclassified training instances.
+Then it trains a second classifier, using the updated weights, and again makes predic‐
+tions on the training set, updates the instance weights, and so on
+"""
+
+from sklearn.ensemble import AdaBoostClassifier
+
+ada_clf = AdaBoostClassifier(
+    DecisionTreeClassifier(max_depth=1),
+    n_estimators=200,
+    algorithm="SAMME.R",
+    learning_rate=0.5,
+)
+ada_clf.fit(X_train, y_train)
+
+
+# Gradient Boosting
+"""
+Another very popular boosting algorithm is Gradient Boosting.17 Just like AdaBoost,
+Gradient Boosting works by sequentially adding predictors to an ensemble, each one
+correcting its predecessor. However, instead of tweaking the instance weights at every
+iteration like AdaBoost does, this method tries to fit the new predictor to the residual
+errors made by the previous predictor.
+"""
+from sklearn.tree import DecisionTreeRegressor
+
+tree_reg1 = DecisionTreeRegressor(max_depth=2)
+tree_reg1.fit(X, y)
+# Next, we’ll train a second DecisionTreeRegressor on the residual errors made by the first predictor:
+y2 = y - tree_reg1.predict(X)
+tree_reg2 = DecisionTreeRegressor(max_depth=2)
+tree_reg2.fit(X, y2)
+# Then we train a third regressor on the residual errors made by the second predictor:
+y3 = y2 - tree_reg2.predict(X)
+tree_reg3 = DecisionTreeRegressor(max_depth=2)
+tree_reg3.fit(X, y3)
+# Now we have an ensemble containing three trees. It can make predictions on a new
+# instance simply by adding up the predictions of all the trees:
+y_pred = sum(tree.predict(X_new) for tree in (tree_reg1, tree_reg2, tree_reg3))
