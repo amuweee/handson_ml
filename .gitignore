@@ -2,3 +2,4 @@
 .vscode
 *.csv
 *.tgz
+my_logs/*
